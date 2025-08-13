@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cancún Beach Simulator</title>
+
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script defer src="./script.js"></script>
+  </head>
+  <body>
+    <div id="gameContainer">
+      <div id="ui">
+        <div id="instructions">
+          <h3>🏖️ Cancún Beach Simulator</h3>
+          <p><strong>WASD:</strong> Move around</p>
+          <p><strong>←→ Arrow Keys:</strong> Look left/right</p>
+          <p><strong>E:</strong> Talk to characters</p>
+          <p><strong>ESC:</strong> Close chat</p>
+        </div>
+
+        <div id="crosshair"></div>
+        <div id="interactionPrompt">Press E to talk</div>
+        <div id="loading">AI is thinking...</div>
+
+        <div id="chatInterface">
+          <div id="chatMessages"></div>
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="Type your message..."
+          />
+          <button id="sendButton">Send</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

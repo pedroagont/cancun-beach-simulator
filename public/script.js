@@ -25,6 +25,15 @@ let isTouching = false;
 function init() {
   localPlayerName = prompt("Enter your name:");
 
+  // **Send player data including socket id**
+  fetch("/players", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: localPlayerName,
+    }),
+  }).catch((err) => console.error("Failed to register player:", err));
+
   // Create scene
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87ceeb, 50, 200);

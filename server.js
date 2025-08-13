@@ -1,16 +1,14 @@
 // server.js
+import "dotenv/config";
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import dotenv from "dotenv";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-
-dotenv.config();
+import db from "./db.js";
 
 // --- Express setup ---
-
 const allowedOrigins = {
   origin: [process.env.FRONTEND_URL || "http://localhost:3000"],
   methods: ["GET", "POST"],
@@ -28,7 +26,6 @@ app.use(morgan("dev"));
 app.use(cors(allowedOrigins));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.static("public"));
-
 
 // open ai requirements and setup
 import OpenAI from "openai";
@@ -113,7 +110,7 @@ io.on("connection", (socket) => {
       });
     }
   });
-  
+
   // When a player disconnects
   socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);
@@ -151,6 +148,40 @@ app.post("/generate-ai-response", aiLimiter, async (req, res) => {
     console.error("AI error:", error);
     res.status(500).json({ error: "Failed to generate AI response" });
   }
+});
+
+// API route to track player creation
+app.post("/players", async (req, res) => {
+  // Get client IP
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",").shift() ||
+    req.socket?.remoteAddress;
+
+  try {
+    const { rows } = await db.query("SELECT * FROM players WHERE ip = $1", [
+      ip,
+    ]);
+    if (rows.length > 0) {
+      return res
+        .status(400)
+        .json({ message: "Player with this IP already exists" });
+    }
+
+    const player = await db.query(
+      "INSERT INTO players (name, ip) VALUES ($1, $2) RETURNING *;",
+      [req.body.name, ip]
+    );
+    res.json({ message: "Player created", player });
+  } catch (error) {
+    console.error("Database error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// API route to get all players
+app.get("/players", async (req, res) => {
+  const { rows } = await db.query("SELECT * FROM players;");
+  res.json(rows);
 });
 
 // --- Start server ---

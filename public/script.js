@@ -4,8 +4,9 @@ let keys = {};
 let npcs = [];
 let currentNPC = null;
 let chatOpen = false;
+let messages = [];
 
-let localPlayerName = prompt("Enter your name:");
+let localPlayerName;
 let players = []; // Array of all players including local player
 let socket = io(); // For real-time connections
 
@@ -13,8 +14,17 @@ let socket = io(); // For real-time connections
 const MOVE_SPEED = 0.1;
 const LOOK_SPEED = 0.02;
 
+// Mobile
+let touchStartX = 0;
+let touchStartY = 0;
+let touchMoveX = 0;
+let touchMoveY = 0;
+let isTouching = false;
+
 // Initialize the game
 function init() {
+  player = prompt("Enter your name:");
+
   // Create scene
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
@@ -514,6 +524,50 @@ document.getElementById("chatInput").addEventListener("keypress", (e) => {
   if (e.key === "Enter") sendMessage();
 });
 
+// Mobile
+// Start touch
+document.addEventListener("touchstart", (e) => {
+  if (e.touches.length === 1) {
+    isTouching = true;
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+});
+
+// Move touch
+document.addEventListener("touchmove", (e) => {
+  if (!isTouching || e.touches.length !== 1) return;
+
+  touchMoveX = e.touches[0].clientX - touchStartX;
+  touchMoveY = e.touches[0].clientY - touchStartY;
+});
+
+// End touch
+document.addEventListener("touchend", () => {
+  isTouching = false;
+  touchMoveX = 0;
+  touchMoveY = 0;
+});
+
+// Add this once, outside of checkInteractionPrompt
+document.body.addEventListener("click", (e) => {
+  if (e.target.id === "interactionPrompt") {
+    // Only open chat if near an NPC and chat not already open
+    const playerPosition = player.position;
+    const interactionDistance = 5;
+    const nearbyNPC = npcs.find(
+      (npc) => npc.position.distanceTo(playerPosition) < interactionDistance
+    );
+
+    if (nearbyNPC && !chatOpen) {
+      openChatInterface(nearbyNPC);
+    }
+  } else if (chatOpen && !document.getElementById("chatInterface").contains(e.target)) {
+    // Clicked anywhere else, close chat
+    closeChatInterface();
+  }
+});
+
 function checkNPCInteraction() {
   const playerPosition = player.position;
   const interactionDistance = 5;
@@ -534,7 +588,7 @@ function openChatInterface(npc) {
       content: `You are ${npc.userData.name}, a ${npc.userData.personality}, you are located in Playa Delfines next to the iconic and colorful Cancún letters, respond questions only about Cancún in a friendly way, all your responses must be short, concise and easily to read through a small chat window, if there is any content in lists only separate through commas.`,
     },
   ];
-  localStorage.setItem("chatMessages", JSON.stringify(initialMessages));
+  messages = initialMessages; // Reset messages for new chat
   currentNPC = npc;
   chatOpen = true;
   document.getElementById("chatInterface").style.display = "block";
@@ -549,7 +603,7 @@ function openChatInterface(npc) {
 }
 
 function closeChatInterface() {
-  localStorage.removeItem("chatMessages");
+  messages = [];
   chatOpen = false;
   currentNPC = null;
   document.getElementById("chatInterface").style.display = "none";
@@ -561,10 +615,7 @@ async function sendMessage() {
   const input = document.getElementById("chatInput");
   const message = input.value.trim();
   if (!message) return;
-
-  const messages = JSON.parse(localStorage.getItem("chatMessages"));
-  messages.push({ role: "user", content: message });
-
+  
   // Add user message to chat
   addMessageToChat("user", message);
   input.value = "";
@@ -575,9 +626,6 @@ async function sendMessage() {
 
   try {
     const response = await generateAIResponse(messages);
-    messages.push({ role: "assistant", content: response });
-
-    localStorage.setItem("chatMessages", JSON.stringify(messages));
     addMessageToChat("npc", response);
   } catch (error) {
     addMessageToChat(
@@ -596,8 +644,10 @@ function addMessageToChat(type, message) {
   messageDiv.className = `message ${type}-message`;
 
   if (type === "npc") {
+    messages.push({ role: "assistant", content: message });
     messageDiv.innerHTML = `<strong>${currentNPC.userData.name}:</strong> ${message}`;
   } else {
+    messages.push({ role: "user", content: message });
     messageDiv.textContent = message;
   }
 
@@ -669,6 +719,23 @@ socket.emit("joinGame", {
 
 function handleMovement() {
   const moveVector = new THREE.Vector3();
+  
+  if (isTouching) {
+    // Simple sensitivity
+    const MOVE_SENSITIVITY = 0.0005;
+    const ROTATE_SENSITIVITY = 0.0002;
+
+    // Move forward/backward
+    moveVector.z += touchMoveY * MOVE_SENSITIVITY;
+    moveVector.x -= touchMoveX * MOVE_SENSITIVITY;
+
+    // Optional: rotate based on horizontal swipe
+    player.rotation.y -= touchMoveX * ROTATE_SENSITIVITY;
+
+      // Apply movement relative to player rotation
+    moveVector.applyQuaternion(player.quaternion);
+    player.position.add(moveVector);
+  }
 
   // WASD movement
   if (keys["KeyW"]) moveVector.z -= MOVE_SPEED;

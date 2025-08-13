@@ -127,6 +127,12 @@ body {
   border-radius: 25px;
   display: none;
   animation: pulse 2s infinite;
+    pointer-events: auto; /* Ensure clicks are registered */
+
+}
+
+canvas {
+  pointer-events: none; /* Allow underlying HTML elements to be clickable */
 }
 
 @keyframes pulse {

@@ -111,7 +111,7 @@ io.on("connection", (socket) => {
       });
     }
   });
-
+  
   // When a player disconnects
   socket.on("disconnect", () => {
     console.log(`Player disconnected: ${socket.id}`);

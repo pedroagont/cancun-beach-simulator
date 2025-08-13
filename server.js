@@ -158,20 +158,20 @@ app.post("/players", async (req, res) => {
     req.socket?.remoteAddress;
 
   try {
-    const { rows } = await db.query("SELECT * FROM players WHERE ip = $1", [
-      ip,
-    ]);
-    if (rows.length > 0) {
-      return res
-        .status(400)
-        .json({ message: "Player with this IP already exists" });
-    }
+    // const { rows } = await db.query("SELECT * FROM players WHERE ip = $1", [
+    //   ip,
+    // ]);
+    // if (rows.length > 0) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "Player with this IP already exists" });
+    // }
 
-    const player = await db.query(
+    const { rows } = await db.query(
       "INSERT INTO players (name, ip) VALUES ($1, $2) RETURNING *;",
       [req.body.name, ip]
     );
-    res.json({ message: "Player created", player });
+    res.json({ message: "Player created", player: rows[0] });
   } catch (error) {
     console.error("Database error:", error);
     return res.status(500).json({ message: "Internal server error" });

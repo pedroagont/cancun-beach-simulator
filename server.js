@@ -23,10 +23,12 @@ const aiLimiter = rateLimit({
 });
 
 const app = express();
+app.set("trust proxy", 1); // 1 means trust the first proxy in the chain
 app.use(morgan("dev"));
 app.use(cors(allowedOrigins));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.static("public"));
+
 
 // open ai requirements and setup
 import OpenAI from "openai";

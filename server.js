@@ -5,25 +5,46 @@ import { Server } from "socket.io";
 import cors from "cors";
 import dotenv from "dotenv";
 import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
 // --- Express setup ---
+
+const allowedOrigins = {
+  origin: [process.env.FRONTEND_URL || "http://localhost:3000"],
+  methods: ["GET", "POST"],
+};
+
+const aiLimiter = rateLimit({
+  windowMs: 10 * 1000, // 10 seconds
+  max: 5, // max 5 requests per IP per window
+  message: "Too many requests, please wait a few seconds.",
+});
+
 const app = express();
 app.use(morgan("dev"));
-app.use(cors());
-app.use(express.json());
+app.use(cors(allowedOrigins));
+app.use(express.json({ limit: "10kb" }));
 app.use(express.static("public"));
 
 // open ai requirements and setup
 import OpenAI from "openai";
-// const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const openai = new OpenAI();
 
 // --- HTTP + Socket.io setup ---
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }, // Set your frontend domain in production
+  cors: allowedOrigins, // Set your frontend domain in production
+});
+io.engine.pingInterval = 25000;
+io.engine.pingTimeout = 60000;
+
+io.use((socket, next) => {
+  if (typeof socket.handshake.query !== "object") {
+    return next(new Error("Invalid handshake"));
+  }
+  next();
 });
 
 // --- Store connected players ---
@@ -35,6 +56,15 @@ io.on("connection", (socket) => {
 
   // When a player joins
   socket.on("joinGame", (data) => {
+    if (
+      !data?.name ||
+      typeof data.name !== "string" ||
+      !data?.color ||
+      typeof data.color !== "number"
+    ) {
+      return; // ignore invalid join
+    }
+
     console.log(`${data.name} joined the game`);
 
     // Assign ID
@@ -59,6 +89,15 @@ io.on("connection", (socket) => {
 
   // When a player moves
   socket.on("move", (data) => {
+    if (
+      !data ||
+      typeof data.x !== "number" ||
+      typeof data.y !== "number" ||
+      typeof data.z !== "number" ||
+      typeof data.rotationY !== "number"
+    )
+      return;
+
     if (players[socket.id]) {
       players[socket.id].x = data.x;
       players[socket.id].y = data.y;
@@ -86,7 +125,7 @@ io.on("connection", (socket) => {
 });
 
 // --- AI Response endpoint ---
-app.post("/generate-ai-response", async (req, res) => {
+app.post("/generate-ai-response", aiLimiter, async (req, res) => {
   try {
     // declare and validate messages input
     const { messages } = req.body;

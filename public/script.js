@@ -23,7 +23,7 @@ let isTouching = false;
 
 // Initialize the game
 function init() {
-  player = prompt("Enter your name:");
+  localPlayerName = prompt("Enter your name:");
 
   // Create scene
   scene = new THREE.Scene();

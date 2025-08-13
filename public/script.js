@@ -5,6 +5,10 @@ let npcs = [];
 let currentNPC = null;
 let chatOpen = false;
 
+let localPlayerName = prompt("Enter your name:");
+let players = []; // Array of all players including local player
+let socket = io(); // For real-time connections
+
 // Movement settings
 const MOVE_SPEED = 0.1;
 const LOOK_SPEED = 0.02;
@@ -41,6 +45,36 @@ function init() {
   createEnvironment();
   createLighting();
   createNPCs();
+
+  // socket events
+  // When a new player joins from server
+  socket.on("newPlayer", (data) => {
+    const { id, name, color, x, z } = data;
+    // Avoid adding duplicate local player
+    if (!players.find((p) => p.userData.id === id)) {
+      const newPlayer = createPlayer(name, color, x, z, "Remote player");
+      newPlayer.userData.id = id;
+      players.push(newPlayer);
+    }
+  });
+
+  // When server tells a player moved
+  socket.on("playerMoved", (data) => {
+    const { id, position, rotation } = data;
+    const playerObj = players.find((p) => p.userData.id === id);
+    if (playerObj) {
+      playerObj.position.set(position.x, position.y, position.z);
+      playerObj.rotation.y = rotation.y;
+    }
+  });
+
+  // Send local player info to server
+  socket.emit("joinGame", {
+    name: localPlayerName,
+    color: 0x00ff00,
+    x: player.position.x,
+    z: player.position.z,
+  });
 
   // Start game loop
   animate();
@@ -381,7 +415,7 @@ function createNPCs() {
   ];
 
   npcData.forEach((data) => {
-    const npc = createNPC(
+    const npc = createPlayer(
       data.name,
       data.color,
       data.x,
@@ -392,7 +426,21 @@ function createNPCs() {
   });
 }
 
-function createNPC(name, color, x, z, personality) {
+function createPlayerLabel(name) {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  context.font = "40px Arial";
+  context.fillStyle = "white";
+  context.fillText(name, 50, 100);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(3, 1.5, 1); // Adjust size
+  return sprite;
+}
+
+function createPlayer(name, color, x, z, personality) {
   const group = new THREE.Group();
 
   // Body
@@ -410,6 +458,11 @@ function createNPC(name, color, x, z, personality) {
   head.position.y = 2.7;
   head.castShadow = true;
   group.add(head);
+
+  // Name label
+  const nameLabel = createPlayerLabel(name);
+  nameLabel.position.set(0, 4, 0); // Above the head
+  group.add(nameLabel);
 
   // Simple animation
   const originalY = 0;
@@ -490,7 +543,9 @@ function openChatInterface(npc) {
                     <strong>${npc.userData.name}:</strong> ¡Hola! Welcome to our beautiful Cancún beach! How can I help you today?
                 </div>
             `;
-  document.getElementById("chatInput").focus();
+  const input = document.getElementById("chatInput");
+  input.focus();
+  input.value = "";
 }
 
 function closeChatInterface() {
@@ -604,6 +659,14 @@ function animate() {
   renderer.render(scene, camera);
 }
 
+// Send local player info to server
+socket.emit("joinGame", {
+  name: localPlayerName,
+  color: 0x00ff00,
+  x: player?.position.x,
+  z: player?.position.z,
+});
+
 function handleMovement() {
   const moveVector = new THREE.Vector3();
 
@@ -623,6 +686,14 @@ function handleMovement() {
 
   // Keep player on ground
   player.position.y = 0;
+
+  // Notify server of movement
+  socket.emit("move", {
+    x: player.position.x,
+    y: player.position.y,
+    z: player.position.z,
+    rotationY: player.rotation.y,
+  });
 }
 
 // Handle window resize

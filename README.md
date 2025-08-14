@@ -14,7 +14,7 @@ A lightweight, multiplayer 3D beach simulation game set in Cancún. Players can 
 - Real-time multiplayer support with **Socket.IO**.
 - Interactable NPCs with AI-generated responses.
 - Dynamic environment:
-  - Ocean waves, sand, streets, palm trees, and beach umbrellas.
+  - Ocean, sand, streets, palm trees, and beach umbrellas.
   - Iconic colorful **Cancún letters** as a backdrop.
 - Player tracking stored in **PostgreSQL**.
 - Works on **desktop** and **mobile**.
@@ -26,8 +26,7 @@ A lightweight, multiplayer 3D beach simulation game set in Cancún. Players can 
 - **Frontend:** HTML, CSS, JavaScript, Three.js  
 - **Backend:** Node.js, Express.js, Socket.IO  
 - **Database:** PostgreSQL  
-- **AI:** Optional AI NPC responses via backend API  
-- **Deployment:** Cloud-ready (Render, Heroku, etc.)
+- **AI:** AI generated NPC responses via backend API 
 
 ---
 
@@ -48,15 +47,14 @@ npm install
 Create a .env file for local development:
 
 ```
+OPENAI_API_KEY=sk-XXXXXXXXXXXXX
+
 # Local PostgreSQL
 DB_USER=postgres
 DB_PASSWORD=yourpassword
 DB_NAME=cancun_beach
 DB_HOST=localhost
 DB_PORT=5432
-
-# Cloud deployment (optional)
-DATABASE_URL=your-cloud-database-url
 ```
 
 ### 4. Start the server

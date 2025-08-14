@@ -24,6 +24,9 @@ let isTouching = false;
 // Initialize the game
 function init() {
   localPlayerName = prompt("Enter your name:");
+  if (!localPlayerName || localPlayerName.trim() === "") {
+    localPlayerName = "Player" + Math.floor(Math.random() * 1000);
+  }
 
   // **Send player data including socket id**
   fetch("/players", {

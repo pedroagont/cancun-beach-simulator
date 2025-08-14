@@ -1,4 +1,4 @@
-// server.js
+// REQUIREMENTS
 import "dotenv/config";
 import express from "express";
 import http from "http";
@@ -7,19 +7,16 @@ import cors from "cors";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import db from "./db.js";
+import OpenAI from "openai";
 
-// --- Express setup ---
+// SETUP & MIDDLEWARE
+// Allowed origins
 const allowedOrigins = {
   origin: [process.env.FRONTEND_URL || "http://localhost:3000"],
   methods: ["GET", "POST"],
 };
 
-const aiLimiter = rateLimit({
-  windowMs: 10 * 1000, // 10 seconds
-  max: 5, // max 5 requests per IP per window
-  message: "Too many requests, please wait a few seconds.",
-});
-
+// Express
 const app = express();
 app.set("trust proxy", 1); // 1 means trust the first proxy in the chain
 app.use(morgan("dev"));
@@ -27,11 +24,7 @@ app.use(cors(allowedOrigins));
 app.use(express.json({ limit: "10kb" }));
 app.use(express.static("public"));
 
-// open ai requirements and setup
-import OpenAI from "openai";
-const openai = new OpenAI();
-
-// --- HTTP + Socket.io setup ---
+// SocketIO
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: allowedOrigins, // Set your frontend domain in production
@@ -39,6 +32,21 @@ const io = new Server(server, {
 io.engine.pingInterval = 25000;
 io.engine.pingTimeout = 60000;
 
+// OpenAI SDK
+const openai = new OpenAI();
+
+// AI API Limiter
+const aiLimiter = rateLimit({
+  windowMs: 10 * 1000, // 10 seconds
+  max: 5, // max 5 requests per IP per window
+  message: "Too many requests, please wait a few seconds.",
+});
+
+// Memory for current connected players
+let players = {}; // { socketId: { id, name, color, x, z } }
+
+// SOCKETS
+// Handshake middleware
 io.use((socket, next) => {
   if (typeof socket.handshake.query !== "object") {
     return next(new Error("Invalid handshake"));
@@ -46,13 +54,11 @@ io.use((socket, next) => {
   next();
 });
 
-// --- Store connected players ---
-// Store connected players
-let players = {}; // { socketId: { id, name, color, x, z } }
-
+// Connection
 io.on("connection", (socket) => {
   console.log(`New connection: ${socket.id}`);
 
+  // SOCKET EVENTS
   // When a player joins
   socket.on("joinGame", (data) => {
     if (
@@ -123,7 +129,8 @@ io.on("connection", (socket) => {
   });
 });
 
-// --- AI Response endpoint ---
+// ROUTES
+// AI Response endpoint
 app.post("/generate-ai-response", aiLimiter, async (req, res) => {
   try {
     // declare and validate messages input
@@ -150,7 +157,7 @@ app.post("/generate-ai-response", aiLimiter, async (req, res) => {
   }
 });
 
-// API route to track player creation
+// API route to create a new player
 app.post("/players", async (req, res) => {
   // Get client IP
   const ip =
@@ -158,15 +165,6 @@ app.post("/players", async (req, res) => {
     req.socket?.remoteAddress;
 
   try {
-    // const { rows } = await db.query("SELECT * FROM players WHERE ip = $1", [
-    //   ip,
-    // ]);
-    // if (rows.length > 0) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Player with this IP already exists" });
-    // }
-
     const { rows } = await db.query(
       "INSERT INTO players (name, ip) VALUES ($1, $2) RETURNING *;",
       [req.body.name, ip]
@@ -182,6 +180,11 @@ app.post("/players", async (req, res) => {
 app.get("/players", async (req, res) => {
   const { rows } = await db.query("SELECT * FROM players;");
   res.json(rows);
+});
+
+// catch all route
+app.use((req, res) => {
+  res.status(404).send("Not Found");
 });
 
 // --- Start server ---

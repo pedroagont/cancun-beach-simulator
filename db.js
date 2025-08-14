@@ -10,14 +10,12 @@ const db = new Pool(
         ssl: { rejectUnauthorized: false }, // required by Render / Heroku
       }
     : {
-        user: process.env.DB_USER || "cancun_beach_simulator_db_user", // local Postgres user
-        host:
-          process.env.DB_HOST ||
-          "dpg-d2eel0ndiees73fpoii0-a.oregon-postgres.render.com", // usually localhost
-        database: process.env.DB_NAME || "cancun_beach_simulator_db",
-        password: process.env.DB_PASSWORD || "gZGS1dvsnuNfkaXkx512H45AqdFkopQu", // your local password
+        user: process.env.DB_USER,
+        host: process.env.DB_HOST,
+        database: process.env.DB_NAME,
+        password: process.env.DB_PASSWORD,
         port: parseInt(process.env.DB_PORT) || 5432,
-        ssl: { rejectUnauthorized: false }, // required by Render / Heroku
+        ssl: { rejectUnauthorized: false },
       }
 );
 

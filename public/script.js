@@ -24,6 +24,9 @@ let isTouching = false;
 // Initialize the game
 function init() {
   localPlayerName = prompt("Enter your name:");
+  if (!localPlayerName || localPlayerName.trim() === "") {
+    localPlayerName = "Player" + Math.floor(Math.random() * 1000);
+  }
 
   // **Send player data including socket id**
   fetch("/players", {
@@ -295,25 +298,7 @@ function createCancunLetters() {
       -30 // Place them closer to the ocean for a nice backdrop
     );
 
-    // Add subtle animation
-    const originalY = 0;
-    const animationOffset = (index * Math.PI) / 3;
-    group.userData = {
-      originalY,
-      animationOffset,
-      animate: function (time) {
-        this.position.y =
-          this.userData.originalY +
-          Math.sin(time * 0.001 + this.userData.animationOffset) * 0.2;
-        this.rotation.y =
-          Math.sin(time * 0.0005 + this.userData.animationOffset) * 0.1;
-      },
-    };
-
     scene.add(group);
-
-    // Add to npcs array for animation (reuse the animation system)
-    //   npcs.push(group);
   });
 }
 
@@ -509,10 +494,6 @@ function createPlayer(name, color, x, z, personality) {
 // Input handling
 document.addEventListener("keydown", (event) => {
   keys[event.code] = true;
-
-  if (event.code === "KeyE" && !chatOpen) {
-    checkNPCInteraction();
-  }
 
   if (event.code === "Escape") {
     closeChatInterface();
@@ -759,6 +740,8 @@ function handleMovement() {
   // Arrow key rotation
   if (keys["ArrowLeft"]) player.rotation.y += LOOK_SPEED;
   if (keys["ArrowRight"]) player.rotation.y -= LOOK_SPEED;
+  if (keys["ArrowUp"]) player.rotation.x += LOOK_SPEED;
+  if (keys["ArrowDown"]) player.rotation.x -= LOOK_SPEED;
 
   // Keep player on ground
   player.position.y = 0;

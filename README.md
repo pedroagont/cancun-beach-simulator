@@ -4,7 +4,7 @@ A lightweight, multiplayer 3D beach simulation game set in Cancún. Players can 
 
 > 🕹️ [Playable Demo](https://cancun-beach-simulator.onrender.com)
 
-![Tux, the Linux mascot](/public/back.png)
+![Cancun Beach Simulator](/public/back.png)
 
 ---
 
